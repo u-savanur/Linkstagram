@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linkstagram HTML Analyzer Debugger</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 { margin-bottom: 20px; color: var(--primary); }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: monospace;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        .results { margin-top: 30px; display: none; }
+        .results.active { display: block; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            padding: 16px;
+            background: #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .section-content {
+            display: none;
+            padding: 16px;
+        }
+
+        .section-content.active { display: block; }
+
+        .chevron { transition: transform 0.2s; }
+        .chevron.open { transform: rotate(90deg); }
+
+        .info-box {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-box p { margin: 4px 0 0; color: #475569; word-break: break-all; }
+
+        .pattern-box {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+        .blue { background: #dbeafe; color: #1e40af; }
+        .green { background: #dcfce7; color: #166534; }
+        .purple { background: #f3e8ff; color: #6b21a8; }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin-top: 8px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 0 4px 4px 0;
+            color: #475569;
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .grid-item { background: #f8fafc; padding: 8px; border-radius: 4px; font-size: 13px; }
+
+        .badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #cbd5e1;
+            margin-right: 6px;
+            font-weight: bold;
+        }
+        .badge.json { background: #fcd34d; color: #78350f; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Linkstagram HTML Debugger</h1>
+    <div id="instructions">
+        <p>Paste the raw HTML source code from LinkedIn or Instagram below to analyze it locally.</p>
+    </div>
+    
+    <textarea id="htmlInput" placeholder="Paste full HTML here..."></textarea>
+    <button onclick="analyzeHTML()">Analyze HTML</button>
+
+    <div id="results" class="results"></div>
+</div>
+
+<script>
+            function analyzeHTML() {
+            var html = document.getElementById('htmlInput').value;
+            
+            if (!html.trim()) {
+                alert('Please paste some HTML first');
+                return;
+            }
+
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+
+            var analysis = {
+                title: doc.querySelector('title') ? doc.querySelector('title').textContent : 'Not found',
+                metaDescription: doc.querySelector('meta[name="description"]') ? doc.querySelector('meta[name="description"]').getAttribute('content') : 'Not found',
+                ogTitle: doc.querySelector('meta[property="og:title"]') ? doc.querySelector('meta[property="og:title"]').getAttribute('content') : 'Not found',
+                h1Tags: getH1Tags(doc),
+                h2Tags: getH2Tags(doc),
+                relevantClasses: findRelevantClasses(doc),
+                textPatterns: findTextPatterns(doc.body.textContent),
+                scriptTags: getScriptTags(doc),
+                sectionsWithIds: getSectionsWithIds(doc),
+                linkedinClasses: findLinkedInClasses(doc)
+            };
+
+            displayResults(analysis);
+            
+            document.getElementById('instructions').style.display = 'none';
+            document.getElementById('results').classList.add('active');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function getH1Tags(doc) {
+            var h1s = doc.querySelectorAll('h1');
+            var result = [];
+            for (var i = 0; i < h1s.length; i++) {
+                result.push({
+                    text: h1s[i].textContent.trim(),
+                    classes: h1s[i].className,
+                    html: h1s[i].outerHTML.substring(0, 200)
+                });
+            }
+            return result;
+        }
+
+        function getH2Tags(doc) {
+            var h2s = doc.querySelectorAll('h2');
+            var result = [];
+            for (var i = 0; i < h2s.length; i++) {
+                result.push({
+                    text: h2s[i].textContent.trim(),
+                    classes: h2s[i].className,
+                    html: h2s[i].outerHTML.substring(0, 200)
+                });
+            }
+            return result;
+        }
+
+        function findRelevantClasses(doc) {
+            var allElements = doc.querySelectorAll('*');
+            var classSet = {};
+            var keywords = ['headline', 'title', 'profile', 'name', 'bio', 'about', 'location', 'summary'];
+            
+            for (var i = 0; i < allElements.length; i++) {
+                var classes = allElements[i].className;
+                if (typeof classes === 'string') {
+                    var classList = classes.split(' ');
+                    for (var j = 0; j < classList.length; j++) {
+                        var cls = classList[j];
+                        if (cls) {
+                            for (var k = 0; k < keywords.length; k++) {
+                                if (cls.toLowerCase().indexOf(keywords[k]) !== -1) {
+                                    classSet[cls] = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            var result = [];
+            for (var cls in classSet) {
+                result.push(cls);
+            }
+            return result.slice(0, 50);
+        }
+
+        function findTextPatterns(text) {
+            var followersMatch = text.match(/([\d,]+)\s*followers?/i);
+            var connectionsMatch = text.match(/([\d,]+)\+?\s*connections?/i);
+            var locationMatch = text.match(/([A-Z][a-z]+,\s*[A-Z][a-z]+)/);
+            
+            return {
+                followers: followersMatch ? followersMatch[0] : 'Not found',
+                connections: connectionsMatch ? connectionsMatch[0] : 'Not found',
+                location: locationMatch ? locationMatch[0] : 'Not found'
+            };
+        }
+
+        function getScriptTags(doc) {
+            var scripts = doc.querySelectorAll('script');
+            var result = [];
+            for (var i = 0; i < scripts.length; i++) {
+                var script = scripts[i];
+                result.push({
+                    index: i,
+                    type: script.type || 'text/javascript',
+                    hasContent: script.textContent.length > 0,
+                    contentPreview: script.textContent.substring(0, 500),
+                    containsJSON: script.textContent.indexOf('{') !== -1 && script.textContent.indexOf('}') !== -1
+                });
+            }
+            return result;
+        }
+
+        function getSectionsWithIds(doc) {
+            var elements = doc.querySelectorAll('[id]');
+            var result = [];
+            for (var i = 0; i < elements.length; i++) {
+                result.push({
+                    id: elements[i].id,
+                    tagName: elements[i].tagName.toLowerCase(),
+                    textPreview: elements[i].textContent.substring(0, 100).trim()
+                });
+            }
+            return result;
+        }
+
+        function findLinkedInClasses(doc) {
+            var patterns = ['pv-', 'profile-', 'artdeco-', 't-', 'text-'];
+            var found = {};
+            
+            for (var i = 0; i < patterns.length; i++) {
+                var elements = doc.querySelectorAll('[class*="' + patterns[i] + '"]');
+                found[patterns[i]] = elements.length;
+            }
+            
+            return found;
+        }
+
+        function displayResults(analysis) {
+            var resultsDiv = document.getElementById('results');
+            var html = '';
+            
+            // Meta section
+            html += createSection('meta', '📄 Basic Meta Information',
+                '<div class="info-box"><strong>Title:</strong><p>' + escapeHtml(analysis.title) + '</p></div>' +
+                '<div class="info-box"><strong>Meta Description:</strong><p>' + escapeHtml(analysis.metaDescription) + '</p></div>' +
+                '<div class="info-box"><strong>OG Title:</strong><p>' + escapeHtml(analysis.ogTitle) + '</p></div>'
+            );
+
+            // Patterns section
+            html += createSection('patterns', '🔍 Text Patterns Found',
+                '<div class="pattern-box blue"><strong>Followers:</strong> ' + escapeHtml(analysis.textPatterns.followers) + '</div>' +
+                '<div class="pattern-box green"><strong>Connections:</strong> ' + escapeHtml(analysis.textPatterns.connections) + '</div>' +
+                '<div class="pattern-box purple"><strong>Location:</strong> ' + escapeHtml(analysis.textPatterns.location) + '</div>'
+            );
+
+            // H1 tags
+            var h1Content = '';
+            if (analysis.h1Tags.length === 0) {
+                h1Content = '<p style="color: #6b7280;">No H1 tags found</p>';
+            } else {
+                for (var i = 0; i < analysis.h1Tags.length; i++) {
+                    var h1 = analysis.h1Tags[i];
+                    h1Content += '<div class="item-box">' +
+                        '<div class="item-title">' + escapeHtml(h1.text) + '</div>' +
+                        '<div class="item-meta">Classes: ' + escapeHtml(h1.classes || 'none') + '</div>' +
+                        '<div class="code-block">' + escapeHtml(h1.html) + '</div>' +
+                    '</div>';
+                }
+            }
+            html += createSection('h1', '📌 H1 Tags (' + analysis.h1Tags.length + ')', h1Content);
+
+            // H2 tags
+            var h2Content = '';
+            if (analysis.h2Tags.length === 0) {
+                h2Content = '<p style="color: #6b7280;">No H2 tags found</p>';
+            } else {
+                for (var i = 0; i < Math.min(10, analysis.h2Tags.length); i++) {
+                    var h2 = analysis.h2Tags[i];
+                    h2Content += '<div class="item-box">' +
+                        '<div class="item-title">' + escapeHtml(h2.text) + '</div>' +
+                        '<div class="item-meta">Classes: ' + escapeHtml(h2.classes || 'none') + '</div>' +
+                        '<div class="code-block">' + escapeHtml(h2.html) + '</div>' +
+                    '</div>';
+                }
+            }
+            html += createSection('h2', '📌 H2 Tags (' + analysis.h2Tags.length + ')', h2Content);
+
+            // Classes
+            var classesContent = '<div>';
+            for (var i = 0; i < analysis.relevantClasses.length; i++) {
+                classesContent += '<span class="tag">' + escapeHtml(analysis.relevantClasses[i]) + '</span>';
+            }
+            classesContent += '</div>';
+            html += createSection('classes', '🎨 Relevant CSS Classes', classesContent);
+
+            // LinkedIn patterns
+            var linkedinContent = '<div class="grid">';
+            for (var pattern in analysis.linkedinClasses) {
+                linkedinContent += '<div class="grid-item"><strong>' + escapeHtml(pattern) + '*</strong>: ' + 
+                    analysis.linkedinClasses[pattern] + ' elements</div>';
+            }
+            linkedinContent += '</div>';
+            html += createSection('linkedin', '🏷️ LinkedIn Class Patterns', linkedinContent);
+
+            // IDs
+            var idsContent = '';
+            for (var i = 0; i < Math.min(20, analysis.sectionsWithIds.length); i++) {
+                var section = analysis.sectionsWithIds[i];
+                idsContent += '<div class="item-box" style="padding: 8px;">' +
+                    '<strong style="color: #3b82f6;">#' + escapeHtml(section.id) + '</strong> ' +
+                    '<span style="color: #6b7280;">(' + escapeHtml(section.tagName) + ')</span>' +
+                    '<p style="color: #6b7280; font-size: 12px; margin-top: 4px;">' + escapeHtml(section.textPreview) + '</p>' +
+                '</div>';
+            }
+            html += createSection('ids', '🆔 Elements with IDs (First 20)', idsContent);
+
+            // Scripts
+            var scriptsContent = '';
+            var scriptCount = 0;
+            for (var i = 0; i < analysis.scriptTags.length && scriptCount < 10; i++) {
+                var script = analysis.scriptTags[i];
+                if (script.hasContent) {
+                    scriptsContent += '<div class="item-box">' +
+                        '<div style="margin-bottom: 8px;">' +
+                            '<span class="badge">Script #' + script.index + '</span>' +
+                            '<span class="badge">' + escapeHtml(script.type) + '</span>' +
+                            (script.containsJSON ? '<span class="badge json">Contains JSON</span>' : '') +
+                        '</div>' +
+                        '<div class="code-block">' + escapeHtml(script.contentPreview) + '...</div>' +
+                    '</div>';
+                    scriptCount++;
+                }
+            }
+            html += createSection('scripts', '📜 Script Tags (' + analysis.scriptTags.length + ')', scriptsContent);
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function createSection(id, title, content) {
+            return '<div class="card">' +
+                '<div class="section">' +
+                    '<div class="section-header" onclick="toggleSection(\'' + id + '\')">' +
+                        '<span class="section-title">' + title + '</span>' +
+                        '<span class="chevron" id="chevron-' + id + '">▶</span>' +
+                    '</div>' +
+                    '<div class="section-content" id="content-' + id + '">' +
+                        content +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function toggleSection(id) {
+            var content = document.getElementById('content-' + id);
+            var chevron = document.getElementById('chevron-' + id);
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                chevron.classList.remove('open');
+            } else {
+                content.classList.add('active');
+                chevron.classList.add('open');
+            }
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+</script>
+
+</body>
+</html>

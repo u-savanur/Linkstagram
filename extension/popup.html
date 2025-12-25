@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linkstagram</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Linkstagram</h1>
+      <div id="connection-status" class="status-badge checking">Check Backend</div>
+    </header>
+
+    <!-- Section 1: Page Detection -->
+    <section id="detection-section" class="card">
+      <div class="row">
+        <span class="label">Current Site:</span>
+        <span id="site-badge" class="badge">Detecting...</span>
+      </div>
+      <div id="url-display" class="url-text"></div>
+      <div id="error-message" class="error-box hidden">
+        This page is not supported. Please navigate to a LinkedIn or Instagram profile.
+      </div>
+    </section>
+
+    <!-- Section 2: Action -->
+    <section id="action-section" class="card">
+      <button id="capture-btn" disabled>
+        <span class="btn-text">Send Page to Backend</span>
+        <div class="spinner hidden"></div>
+      </button>
+    </section>
+
+    <!-- Section 3: Result -->
+    <section id="result-section" class="card hidden">
+      <h3>Analysis Result</h3>
+      <div id="result-content" class="code-block"></div>
+    </section>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
